@@ -25,6 +25,10 @@ request_schema = {
         "TopicArn": {
             "type": "string",
             "description": "SNS Topic ARN"
+        },
+        "FilterPolicy": {
+            "type": "object",
+            "description": "SNS Filter policy"
         }
     }
 }
@@ -47,12 +51,22 @@ class FilteredSnsSubscriptionProvider(ResourceProvider):
         args = {
             'Protocol': self.get('Protocol'),
             'Endpoint': self.get('Endpoint'),
-            'TopicArn': self.get('TopicArn')
+            'TopicArn': self.get('TopicArn'),
+            'ReturnSubscriptionArn': True,
+            'Attributes': {
+                'FilterPolicy': json.dumps(self.get('FilterPolicy'))
+            }
         }
         return args
 
     def set_return_attributes(self, response):
-        pass
+        self.physical_resource_id = response['SubscriptionArn']
+
+    def has_changed(self, property_name):
+        return self.get_old('property_name', self.get('property_name')) != self.get('property_name')
+
+    def needs_recreate(self):
+        return self.has_changed('Protocol') or self.has_changed('Endpoint') or self.has_changed('TopicArn')
 
     def create(self):
         try:
@@ -64,42 +78,30 @@ class FilteredSnsSubscriptionProvider(ResourceProvider):
             self.fail('{}'.format(e))
 
     def update(self):
-        if self.get_old('Name', self.get('Name')) != self.get('Name'):
-            self.fail('Cannot change the name of a secret')
-            return
-
-        try:
-            args = self.create_arguments()
-            args['SecretId'] = self.physical_resource_id
-            del args['Name']
-            del args['Tags']
-
-            response = self.sm.update_secret(**args)
-            self.set_return_attributes(response)
-
-            if self.get_old('Tags', self.get('Tags')) != self.get('Tags'):
-                if len(self.get_old('Tags')) > 0:
-                    self.sm.untag_resource(SecretId=self.physical_resource_id,
-                                           TagKeys=list(map(lambda t: t['Key'], self.get_old('Tags'))))
-                self.sm.tag_resource(SecretId=self.physical_resource_id, Tags=self.get('Tags'))
-
-        except ClientError as e:
-            self.fail('{}'.format(e))
+        if self.needs_recreate():
+            self.delete()
+            self.create()
+        else:
+            try:
+                args = {
+                    'SubscriptionArn': self.physical_resource_id,
+                    'AttributeName': 'FilterPolicy',
+                    'AttributeValue': json.dumps(self.get('FilterPolicy'))
+                }
+                self.sns.set_subscription_attributes(**args)
+            except ClientError as e:
+                self.fail('{}'.format(e))
 
     def delete(self):
-        if re.match(r'^arn:aws:secretsmanager:.*', self.physical_resource_id):
-            try:
-                self.sm.delete_secret(SecretId=self.physical_resource_id,
-                                      RecoveryWindowInDays=self.get('RecoveryWindowInDays'))
-                self.success('Secret with the name %s is scheduled for deletion' % self.get('Name'))
-            except ClientError as e:
-                if e.response["Error"]["Code"] != 'ResourceNotFoundException':
-                    self.fail('{}'.format(e))
-        else:
-            self.success('Delete request for secret with the name {} is ignored'.format(self.get('Name')))
+        try:
+            self.sns.unsubscribe(SubscriptionArn=self.physical_resource_id)
+            self.success('Subscription deleted: {}'.format(self.physical_resource_id))
+        except ClientError as e:
+            if e.response["Error"]["Code"] != 'ResourceNotFoundException':
+                self.fail('{}'.format(e))
 
 
-provider = SecretsManagerSecretProvider()
+provider = FilteredSnsSubscriptionProvider()
 
 
 def handler(request, context):
