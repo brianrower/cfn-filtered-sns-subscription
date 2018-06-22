@@ -44,7 +44,7 @@ Resources:
             Principal:
               Service:
                 - lambda.amazonaws.com
-  CFNSecretProvider:
+  CFNResourceProvider:
     Type: AWS::Lambda::Function
     DependsOn:
       - LambdaRole
@@ -59,3 +59,14 @@ Resources:
       Timeout: 30
       Role: !GetAtt 'LambdaRole.Arn'
       Runtime: python3.6
+Outputs:
+  LambdaRoleARN:
+    Value: !GetAtt LambdaRole.Arn
+    Description: ARN of the IAM Role which the custom CFN provider will execute as
+    Export:
+      Name: !Sub "${AWS::StackName}-RoleARN"
+  ProviderLambdaARN:
+    Value: !GetAtt CFNResourceProvider.Arn
+    Description: ARN of the provider lambda. Use this value in the 'ServiceToken' property to use this provider
+    Export:
+      Name: !Sub "${AWS::StackName}-ARN"
