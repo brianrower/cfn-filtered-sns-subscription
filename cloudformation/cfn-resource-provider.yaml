@@ -4,10 +4,13 @@ Description: CloudFormation Secret Provider
 Parameters:
   S3BucketPrefix:
     Type: String
-    Default: 'binxio-public'
+    Default: 'cpcp-biorad-custom-cloud-formation-packages'
   CFNCustomProviderZipFileName:
     Type: String
-    Default: 'lambdas/cfn-secret-provider-0.12.0.zip'
+    Default: 'lambdas/cfn-filtered-sns-subscription-provider-latest.zip'
+  FunctionName:
+    Type: String
+    Default: 'cfn-filtered-sns-subscription-provider'
 Resources:
   LambdaPolicy:
     Type: AWS::IAM::Policy
@@ -20,22 +23,7 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - iam:CreateAccessKey
-              - iam:DeleteAccessKey
-              - iam:UpdateAccessKey
-              - ssm:PutParameter
-              - ssm:GetParameter
-              - ssm:DeleteParameter
-              - ec2:ImportKeyPair
-              - ec2:DeleteKeyPair
-              - secretsmanager:DeleteSecret
-              - secretsmanager:CreateSecret
-              - secretsmanager:UpdateSecret
-            Resource:
-              - '*'
-          - Effect: Allow
-            Action:
-              - kms:Encrypt
+              - sns:*
             Resource:
               - '*'
           - Action:
@@ -65,7 +53,7 @@ Resources:
       Code:
         S3Bucket: !Sub '${S3BucketPrefix}-${AWS::Region}'
         S3Key: !Ref 'CFNCustomProviderZipFileName'
-      FunctionName: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:binxio-cfn-secret-provider'
+      FunctionName: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cfn-filtered-sns-subscription-provider'
       Handler: secrets.handler
       MemorySize: 128
       Timeout: 30

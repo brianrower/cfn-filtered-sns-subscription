@@ -19,5 +19,6 @@ Resources:
         event:
           - order_cancelled
           - order_placed
+      ServiceToken: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:cfn-filtered-sns-subscription-provider'
 
 
