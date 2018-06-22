@@ -34,10 +34,10 @@ request_schema = {
 }
 
 
-class FilteredSnsSubscriptionProvider(ResourceProvider):
+class FilteredSNSSubscriptionProvider(ResourceProvider):
 
     def __init__(self):
-        super(FilteredSnsSubscriptionProvider, self).__init__()
+        super(FilteredSNSSubscriptionProvider, self).__init__()
         self._value = None
         self.request_schema = request_schema
         self.sns = boto3.client('sns')
@@ -79,7 +79,6 @@ class FilteredSnsSubscriptionProvider(ResourceProvider):
 
     def update(self):
         if self.needs_recreate():
-            self.delete()
             self.create()
         else:
             try:
@@ -101,7 +100,7 @@ class FilteredSnsSubscriptionProvider(ResourceProvider):
                 self.fail('{}'.format(e))
 
 
-provider = FilteredSnsSubscriptionProvider()
+provider = FilteredSNSSubscriptionProvider()
 
 
 def handler(request, context):
