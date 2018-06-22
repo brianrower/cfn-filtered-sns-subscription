@@ -1,0 +1,23 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo Custom CloudFormation Secret Provider
+Resources:
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-topic'
+
+  Subscription:
+    Type: Custom::FilteredSNSSubscription
+    Properties:
+      Endpoint: "test@example.com"
+      Protocol: "email"
+      TopicArn: !Ref Topic
+      FilterPolicy:
+        store:
+          - example_corp
+        event:
+          - order_cancelled
+          - order_placed
+
+
